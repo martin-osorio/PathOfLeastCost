@@ -23,8 +23,14 @@ import java.util.List;
 public abstract class Pathfinder {
     /**
      * Entry point and only public function of the class
-     *
+     * <p>
      * Finds the cheapest path based on the rule set
+     * The algorithm works as follows:
+     * Start from the right, and work your way backwards to the left
+     * by (sort-of) recursively comparing only two columns.
+     * However, the second column is not the cells that would be to the right of the "left" column
+     * but instead a representation of the cheapest possible path further right
+     * This is achieved by establishing base cases as described bellow
      *
      * @param input
      * @return the cheapest path
@@ -58,7 +64,8 @@ public abstract class Pathfinder {
                 }
             }
         } else if (numColumns == 3) {   //Base case where there are exactly three rows
-            List<Path> lastTwoColumnsOnlyPath = twoRowCase(listOfColumns.get(--numColumns), listOfColumns.get(--numColumns));
+            List<Path> lastTwoColumnsOnlyPath =
+                    twoRowCase(listOfColumns.get(--numColumns), listOfColumns.get(--numColumns));
             List<Path> paths = generalCase(listOfColumns.get(--numColumns), lastTwoColumnsOnlyPath);
             for (Path p : paths) {
                 if (cheapest == null || p.getTotalCost() < cheapest.getTotalCost()) {
@@ -69,10 +76,12 @@ public abstract class Pathfinder {
             //Effectively performs the first three cases reading the matrix from right to left
 
             //Path when looking only at the last two columns
-            List<Path> lastTwoColumnsOnlyPath = twoRowCase(listOfColumns.get(--numColumns), listOfColumns.get(--numColumns));
+            List<Path> lastTwoColumnsOnlyPath =
+                    twoRowCase(listOfColumns.get(--numColumns), listOfColumns.get(--numColumns));
 
             //Path when looking at the last three columns
-            List<Path> pathsWithPreviousColumn = generalCase(listOfColumns.get(--numColumns), lastTwoColumnsOnlyPath);
+            List<Path> pathsWithPreviousColumn =
+                    generalCase(listOfColumns.get(--numColumns), lastTwoColumnsOnlyPath);
 
             //While there are rows remaining, keep adding them to the algorithm
             while (numColumns > 0) {
@@ -197,22 +206,28 @@ public abstract class Pathfinder {
     /**
      * Implementation of the case where there are two rows
      *
-     * @param right
-     * @param left
-     * @return
+     * @param right right column
+     * @param left  left column
+     * @return a set of good paths based on each rows initial cell
      */
     private static List<Path> twoRowCase(List<Cell> right, List<Cell> left) {
         ArrayList<Path> paths = new ArrayList<>();
 
+        //For each row in the left column
+        //Determine which of its three options would produce the cheapest path
+        //Add this path to a set of possible good paths
         for (int i = 0; i < left.size(); i++) {
-            int indexA = getNextYAbove(i, left.size());
-            int indexC = getNextYBelow(i, left.size());
+            int indexA = getNextYAbove(i, left.size()); //Index of the cell above-right
+            int indexC = getNextYBelow(i, left.size()); //Index of the cell bellow-right
+            //Note that i is the index of the cell to the right
 
+            //Determine what the combined cost would be with all three options
             int sumWithA = right.get(indexA).getCost() + left.get(i).getCost();
             int sumWithB = right.get(i).getCost() + left.get(i).getCost();
             int sumWithC = right.get(indexC).getCost() + left.get(i).getCost();
 
-
+            //Compare which option is cheapest
+            //Then create a path with those two cells
             if (sumWithA <= sumWithB) {
                 if (sumWithA <= sumWithC) {
                     Path p = new Path(right.get(indexA));
@@ -239,18 +254,37 @@ public abstract class Pathfinder {
         return paths;
     }
 
+    /**
+     * Implementation of the case where there are more than two rows
+     *
+     * @param right a parallel set of paths to the left column,
+     *              which contain what the optimal steps are further to thr right
+     * @param left  the left column
+     * @return a set of good paths based on each rows initial cell
+     */
     private static List<Path> generalCase(List<Cell> left, List<Path> right) {
         ArrayList<Path> paths = new ArrayList<>();
 
+        //For each row in the left column
+        //Determine which of its three options would produce the cheapest path
+        //This time, do so by adding it
+        // to the value that represents the cheapest possible value
+        // for all columns further right
+        //Add this path to a set of possible good paths
         for (int i = 0; i < left.size(); i++) {
-            int indexA = getNextYAbove(i, left.size());
-            int indexC = getNextYBelow(i, left.size());
+            int indexA = getNextYAbove(i, left.size()); //Index of the cell above-right
+            int indexC = getNextYBelow(i, left.size()); //Index of the cell bellow-right
+            //Note that i is the index of the cell to the right
 
+            //Determine what the combined cost would be with all three options
+            //In this case, the right column represents not a single column,
+            // but the cheapest path achievable to the right of the "left" column
             int sumWithA = right.get(indexA).getTotalCost() + left.get(i).getCost();
             int sumWithB = right.get(i).getTotalCost() + left.get(i).getCost();
             int sumWithC = right.get(indexC).getTotalCost() + left.get(i).getCost();
 
-
+            //Compare which option is cheapest
+            //Then create a path with those two cells
             if (sumWithA <= sumWithB) {
                 if (sumWithA <= sumWithC) {
                     Path p = new Path(right.get(indexA));
@@ -277,83 +311,3 @@ public abstract class Pathfinder {
         return paths;
     }
 }
-
-/*
-static Path getPathOfLowestCost(List<List<Integer>> table) {
-        Path cheapestPath = null;
-
-        for (int row = 0; row < table.size(); row++) {//ROW X
-            //For Each Row:
-
-            Cell startingCell = new Cell(0, row, 0);
-
-            Cell currentCell = new Cell(startingCell.getYPos(), startingCell.getXPos(), table.get(startingCell.getXPos()).get(startingCell.getYPos()));
-            if(currentCell.getCost() > 50){
-                continue;
-            }
-
-            Path path = new Path(currentCell);
-
-            if (table.get(0).size() > 1) {
-                do {
-                    Cell a = new Cell(currentCell.getXPos() + 1, currentCell.getYPos(), table.get(currentCell.getYPos()).get(currentCell.getXPos() + 1));
-                    Cell b = new Cell(currentCell.getXPos() + 1, getNextYAbove(currentCell.getYPos(), table.size()), table.get(getNextYAbove(currentCell.getYPos(), table.size())).get(currentCell.getYPos() + 1));
-                    Cell c = new Cell(currentCell.getXPos() + 1, getNextYBelow(currentCell.getYPos(), table.size()), table.get(getNextYBelow(currentCell.getYPos(), table.size())).get(currentCell.getYPos() + 1));
-
-                    if (a.getCost() <= b.getCost()) {
-                        if (a.getCost() <= c.getCost()) {
-                            path.validatePath();
-                            if (path.getTotalCost()+a.getCost() <= 50) {
-                                path.add(a);
-                                currentCell = a;
-                            } else {
-                                path.setBadPath();
-                                break;
-                            }
-                        } else {//c<a
-                            path.validatePath();
-                            if (path.getTotalCost()+c.getCost() <= 50) {
-                                path.add(c);
-                                currentCell = c;
-                            } else {
-                                path.setBadPath();
-                                break;
-                            }
-                        }
-                    } else {//b<a
-                        if (b.getCost() <= c.getCost()) {
-                            path.validatePath();
-                            if (path.getTotalCost()+b.getCost() <= 50) {
-                                path.add(b);
-                                currentCell = b;
-                            } else {
-                                path.setBadPath();
-                                break;
-                            }
-                        } else {//c<b
-                            path.validatePath();
-                            if (path.getTotalCost()+c.getCost() <= 50) {
-                                path.add(c);
-                                currentCell = c;
-                            } else {
-                                path.setBadPath();
-                                break;
-                            }
-                        }
-                    }
-                } while (currentCell.getXPos() + 1 < table.get(0).size());
-            }
-
-            path.validatePath();
-            if ((cheapestPath == null) || !cheapestPath.isSuccess() || (cheapestPath.getTotalCost() > path.getTotalCost())) {
-                cheapestPath = path;
-            }
-        }
-
-        if (cheapestPath != null) {
-            return cheapestPath;
-        } else {
-             return new Path();
-        }
-    }
- */

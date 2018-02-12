@@ -11,6 +11,7 @@ import static org.junit.Assert.*;
  * Unit tests for the Pathfinder class
  */
 public class PathfinderTest {
+
     @Test
     public void findPath() throws Exception {
         String s = "1,1,1,1\n1,1,1,1\n1,1,1,1\n1,1,1,1\n";
@@ -79,8 +80,6 @@ public class PathfinderTest {
         assertTrue(Pathfinder.findPath(s).isSuccess());
         assertEquals(3, Pathfinder.findPath(s).getTotalCost());
     }
-
-    //TODO
 
     @Test
     public void testSample8() throws Exception {
